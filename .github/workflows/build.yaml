@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [ bugfix/setup-basicsr ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    container: nvidia/cudagl:11.3.1-devel-ubuntu20.04
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [38, 39]
+        os: [ubuntu-20.04 ]
+    
+    env:
+      CONDA_DIR: '/opt/conda'
+      
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v3
+
+    - name: Install wget
+      run: |
+        apt update 
+        apt install wget -y
+
+
+    - name: Cache venv on Ubuntu
+      id: cached-poetry-dependencies-linux
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pip
+          ${{ env.CONDA_DIR }}/miniconda.sh
+        key: pip-cache-${{ runner.os }}-${{ matrix.os }}-${{ matrix.python-version }}
+
+    - name: Download Minioconda
+      if: steps.cache-primes.outputs.cache-hit != 'true'
+      env:
+        CONDA_VERSION: py${{ matrix.python-version }}_4.12.0
+      run: |
+        wget -q -O ./miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh
+      
+    - name: Install Minioconda
+      run: sh ./miniconda.sh -bfp $CONDA_DIR
+
+    - name: Install dependencies
+      run: |
+        mkdir -p ~/.cache
+        chmod -R u+wr ~/.cache
+        export PATH=$CONDA_DIR/bin:$PATH
+        pip install wheel 
+        pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113 twine~=4.0.2
+        pip install -r ./requirements.txt
+    
+    - name: Build and install package
+      env: 
+        TORCH_CUDA_ARCH_LIST: '7.0;7.5;8.0;8.6+PTX'
+        FORCE_CUDA: 1
+      run: |
+        export PATH=$CONDA_DIR/bin:$PATH
+        python ./setup.py bdist_wheel
+        pip install ./dist/*.whl
+
+    - name: Test import
+      run: export PATH=$CONDA_DIR/bin:$PATH && python -c "import basicsr"
+
+    - name: Upload to remote repo
+      env:
+        TWINE_REPOSITORY_URL : ${{ secrets.PYPI_PROD_URL }}
+        TWINE_USERNAME : ${{ secrets.PYPI_USER }}
+        TWINE_PASSWORD : ${{ secrets.PYPI_PASS }}
+      run: |
+        export PATH=$CONDA_DIR/bin:$PATH
+        twine upload --non-interactive --verbose ./dist/*

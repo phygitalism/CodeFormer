@@ -102,7 +102,7 @@ def make_cuda_ext(name, module, sources, sources_cuda=None):
 
     return extension(
         name=f'{module}.{name}',
-        sources=[os.path.join(*module.split('.'), p) for p in sources],
+        sources=[os.path.join("basicsr", *module.split('.'), p) for p in sources],
         define_macros=define_macros,
         extra_compile_args=extra_compile_args)
 
@@ -113,53 +113,47 @@ def get_requirements(filename='requirements.txt'):
     return requires
 
 
-if __name__ == '__main__':
-    if '--cuda_ext' in sys.argv:
-        ext_modules = [
-            make_cuda_ext(
-                name='deform_conv_ext',
-                module='ops.dcn',
-                sources=['src/deform_conv_ext.cpp'],
-                sources_cuda=['src/deform_conv_cuda.cpp', 'src/deform_conv_cuda_kernel.cu']),
-            make_cuda_ext(
-                name='fused_act_ext',
-                module='ops.fused_act',
-                sources=['src/fused_bias_act.cpp'],
-                sources_cuda=['src/fused_bias_act_kernel.cu']),
-            make_cuda_ext(
-                name='upfirdn2d_ext',
-                module='ops.upfirdn2d',
-                sources=['src/upfirdn2d.cpp'],
-                sources_cuda=['src/upfirdn2d_kernel.cu']),
-        ]
-        sys.argv.remove('--cuda_ext')
-    else:
-        ext_modules = []
+ext_modules = [
+    make_cuda_ext(
+        name='deform_conv_ext',
+        module='ops.dcn',
+        sources=['src/deform_conv_ext.cpp'],
+        sources_cuda=['src/deform_conv_cuda.cpp', 'src/deform_conv_cuda_kernel.cu']),
+    make_cuda_ext(
+        name='fused_act_ext',
+        module='ops.fused_act',
+        sources=['src/fused_bias_act.cpp'],
+        sources_cuda=['src/fused_bias_act_kernel.cu']),
+    make_cuda_ext(
+        name='upfirdn2d_ext',
+        module='ops.upfirdn2d',
+        sources=['src/upfirdn2d.cpp'],
+        sources_cuda=['src/upfirdn2d_kernel.cu']),
+]
 
-    write_version_py()
-    setup(
-        name='basicsr',
-        version=get_version(),
-        description='Open Source Image and Video Super-Resolution Toolbox',
-        long_description=readme(),
-        long_description_content_type='text/markdown',
-        author='Xintao Wang',
-        author_email='xintao.wang@outlook.com',
-        keywords='computer vision, restoration, super resolution',
-        url='https://github.com/xinntao/BasicSR',
-        include_package_data=True,
-        packages=find_packages(exclude=('options', 'datasets', 'experiments', 'results', 'tb_logger', 'wandb')),
-        classifiers=[
-            'Development Status :: 4 - Beta',
-            'License :: OSI Approved :: Apache Software License',
-            'Operating System :: OS Independent',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3.8',
-        ],
-        license='Apache License 2.0',
-        setup_requires=['cython', 'numpy'],
-        install_requires=get_requirements(),
-        ext_modules=ext_modules,
-        cmdclass={'build_ext': BuildExtension},
-        zip_safe=False)
+write_version_py()
+setup(
+    name='basicsr-codeformer',
+    version=get_version(),
+    long_description=readme(),
+    description='Open Source Image and Video Super-Resolution Toolbox',
+    long_description_content_type='text/markdown',
+    author='Xintao Wang',
+    author_email='xintao.wang@outlook.com',
+    keywords='computer vision, restoration, super resolution',
+    url='https://github.com/xinntao/BasicSR',
+    include_package_data=True,
+    packages=find_packages(include=["basicsr.*"], exclude=('options', 'datasets', 'experiments', 'results', 'tb_logger', 'wandb', )),
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+    ],
+    license='Apache License 2.0',
+    setup_requires=['cython', 'numpy'],
+    ext_modules=ext_modules,
+    cmdclass={'build_ext': BuildExtension},
+    zip_safe=False)
