@@ -89,6 +89,13 @@ def make_cuda_ext(name, module, sources, sources_cuda=None):
 
     all_extensions = []
 
+    def add_ext(ext_class, name, module, sources, define_macros, extra_compile_args):
+        return ext_class(
+            name=f'{name}.{module}',
+            sources=[os.path.join("basicsr", *module.split('.'), p) for p in sources],
+            define_macros=define_macros,
+            extra_compile_args=extra_compile_args)
+
     if torch.cuda.is_available() or os.getenv('FORCE_CUDA', '0') == '1':
         define_macros += [('WITH_CUDA', None)]
         extension = CUDAExtension
@@ -100,22 +107,14 @@ def make_cuda_ext(name, module, sources, sources_cuda=None):
         sources += sources_cuda
 
         all_extensions.append(
-            extension(
-            name=f'{module}.{name}',
-            sources=[os.path.join("basicsr", *module.split('.'), p) for p in sources],
-            define_macros=define_macros,
-            extra_compile_args=extra_compile_args)
+            add_ext(extension, name, module, sources, define_macros, extra_compile_args)
         )
 
     print(f'Compiling {name} without CUDA')
     extension = CppExtension
 
     all_extensions.append(
-            extension(
-            name=f'{module}.{name}',
-            sources=[os.path.join("basicsr", *module.split('.'), p) for p in sources],
-            define_macros=define_macros,
-            extra_compile_args=extra_compile_args)
+            add_ext(extension, name, module, sources, define_macros, extra_compile_args)
         )
 
     return all_extensions
